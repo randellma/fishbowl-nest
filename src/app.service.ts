@@ -1,45 +1,68 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { Game } from './models/game';
-import { GameDataDto } from './dtos/gameDataDto';
-import { GameMode } from './models/enum/gameMode';
-import { GameState } from './models/enum/gameState';
+import { Game } from './models/Game';
+import { GameDataDto } from './dtos/GameDataDto';
+import { GameMode } from './models/enum/GameMode';
+import { GameState } from './models/enum/GameState';
+import { GameSettings } from './models/GameSettings';
+import { Player } from './models/Player';
+import { GameData } from './data/game.data';
 
 @Injectable()
 export class AppService {
-  private games: Map<string, Game> = new Map();
+
+  constructor(private readonly gameData: GameData) {}
 
   /**
    * The primary game loop method to fetch game data for each player.
    */
-  getGameData(gameId: string, playerId: string): GameDataDto {
+  public getGameData(gameId: string, playerId: string): GameDataDto {
     let game = this.getGameById(gameId);
-    return null;
+    return this.getBaseGameDataDto(game);
   }
 
-  createNewGame(game: Game): string {
-    if (game.id) {
-      throw new BadRequestException(`This game already exists: ${game.id}`);
-    }
+  public createNewGame(gameSettings: GameSettings): string {
+    let game = new Game();
     game.id = this.getRandomString();
-    game.mode = GameMode.IndividualDevices;
+    game.gameSettings = gameSettings;
     game.state = GameState.Registration;
-    this.games.set(game.id, game);
+    this.gameData.games.set(game.id, game);
     return game.id;
   }
 
-  getGames(): Game[] {
-    let game = new Game();
-    game.id = this.getRandomString();
-    this.games.set(game.id, game);
-    return Array.from(this.games.values());
+  public joinGame(gameId: string, playerName: string, teamName: string): GameDataDto {
+    let game = this.getGameById(gameId);
+    let team = game.gameSettings.teams.find(team => team.name == teamName)
+    if (!team) {
+      throw new BadRequestException(`No team found with Id: ${teamName}`);
+    }
+    let existingPlayer = game.gameSettings.teams
+      .some(team => team.players.some(player => player.name == playerName));
+    if (existingPlayer) {
+      throw new BadRequestException(`Player already exists with name: ${playerName}`);
+    }
+    let player = new Player(this.getRandomString(), playerName);
+    team.players.push(player);
+    return this.getBaseGameDataDto(game);
   }
 
-  getGameById(gameId: string): Game {
-    const game = this.games.get(gameId);
+  public getGameDataById(gameId: string): GameDataDto {
+    return this.getBaseGameDataDto(this.getGameById(gameId));
+  }
+
+  private getGameById(gameId: string): Game {
+    const game = this.gameData.games.get(gameId);
     if (!game) {
       throw new BadRequestException(`No game found with Id: ${gameId}`);
     }
     return game;
+  }
+
+  private getBaseGameDataDto(game: Game): GameDataDto {
+    let gameData = new GameDataDto();
+    gameData.gameId = game.id;
+    gameData.gameSettings = game.gameSettings;
+    gameData.gameState = game.state;
+    return gameData;
   }
 
   private getRandomString() {

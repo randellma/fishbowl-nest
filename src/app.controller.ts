@@ -3,34 +3,33 @@ import {
   Get,
   Param,
   Post,
-  Res,
-  BadRequestException,
+  Res
 } from '@nestjs/common';
 import { AppService } from './app.service';
-import { Game } from './models/game';
-import { GameDataDto } from './dtos/gameDataDto';
-import { GameState } from './models/enum/gameState';
-import { Team } from './models/team';
+import { GameDataDto } from './dtos/GameDataDto';
+import { Team } from './models/Team';
+import { GameSettings } from './models/GameSettings';
 
 @Controller('api')
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(private readonly appService: AppService) { }
 
-  private getDefaultGameSettings(): Game {
-    let game = new Game();
-    game.phraseLimitPerPlayer = 3;
-    game.phraseCharacterLimit = 150;
-    game.teams = [new Team('Team 1'), new Team('Team 2')];
-    game.numberOfRounds = 3;
-    game.passesAllowed = 3;
-    game.timeLimit = 60;
-    return game;
+  private getDefaultGameSettings(): GameSettings {
+    let gameSettings = new GameSettings();
+    gameSettings.phraseLimitPerPlayer = 3;
+    gameSettings.phraseCharacterLimit = 150;
+    gameSettings.teams = [new Team('Team_1'), new Team('Team_2')];
+    gameSettings.numberOfRounds = 3;
+    gameSettings.passesAllowed = 3;
+    gameSettings.timeLimit = 60;
+    return gameSettings;
   }
 
   @Get()
-  get(@Res() res) {
+  get(): string {
     let gameId = this.appService.createNewGame(this.getDefaultGameSettings());
-    res.redirect(`/api/${gameId}`);
+    //TODO: just return the id of the game and let front end redirect if it wants to
+    return gameId;
   }
 
   /**
@@ -50,32 +49,29 @@ export class AppController {
    * Create a game with given settings and redirect to its Id to join.
    */
   @Post('create')
-  createGame(@Param('game') game: Game): string {
-    return this.appService.createNewGame(game);
+  createGame(@Param('game') gameSettings: GameSettings): string {
+    return this.appService.createNewGame(gameSettings);
   }
 
   @Get('/:gameId')
-  joinGame(@Param('gameId') gameId: string): GameDataDto {
-    let game = this.appService.getGameById(gameId);
-    let gameData = new GameDataDto();
-    gameData.gameId = game.id;
-    gameData.gameMode = game.mode;
-    gameData.gameState = game.state;
-    gameData.teams = game.teams;
-    return gameData;
+  getGameInfo(@Param('gameId') gameId: string): GameDataDto {
+    return this.appService.getGameDataById(gameId);
   }
 
   /**
-   * Join a game accepting players.
+   * Join a game that is accepting players.
    * @param gameID The Id of the game.
    * @param playerName The name of the player joining. Must be unique.
    */
   @Post('join')
   addPlayer(
-    @Param('gameId') gameID: string,
+    @Param('gameId') gameId: string,
     @Param('playerName') playerName: string,
     @Param('teamName') teamName: string,
-  ): GameDataDto {
-    return null;
+    @Res() res
+  ) {
+    let gameData = this.appService.joinGame(gameId, playerName, teamName);
+    //TODO: remove redirect and return game data instead
+    res.redirect(`/api/${gameId}`);
   }
 }
