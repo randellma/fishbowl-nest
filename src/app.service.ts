@@ -10,7 +10,7 @@ import { GameData } from './data/game.data';
 @Injectable()
 export class AppService {
 
-  constructor(private readonly gameData: GameData) {}
+  constructor(private readonly gameData: GameData) { }
 
   /**
    * The primary game loop method to fetch game data for each player.
@@ -21,6 +21,9 @@ export class AppService {
   }
 
   public createNewGame(gameSettings: GameSettings): string {
+    if (!gameSettings) {
+      throw new BadRequestException('Invalid game settings');
+    }
     let game = new Game();
     game.id = this.getRandomString();
     game.gameSettings = gameSettings;
@@ -29,20 +32,27 @@ export class AppService {
     return game.id;
   }
 
-  public joinGame(gameId: string, playerName: string, teamName: string): GameDataDto {
+  public joinGame(gameId: string, playerName: string, teamName: string): string {
     let game = this.getGameById(gameId);
-    let team = game.gameSettings.teams.find(team => team.name == teamName)
-    if (!team) {
-      throw new BadRequestException(`No team found with Id: ${teamName}`);
+    if (game.state != GameState.Registration) {
+      throw new BadRequestException('This game is not accepting new players');
+    }
+    let team = game.gameSettings.teams.find(team => team.name == teamName);
+    if (team == null) {
+      throw new BadRequestException(`No team found with name: ${teamName}`);
     }
     let existingPlayer = game.gameSettings.teams
       .some(team => team.players.some(player => player.name == playerName));
+
     if (existingPlayer) {
       throw new BadRequestException(`Player already exists with name: ${playerName}`);
     }
     let player = new Player(this.getRandomString(), playerName);
     team.players.push(player);
-    return this.getBaseGameDataDto(game);
+    if (game.leader == null) {
+      game.leader = player;
+    }
+    return player.id;
   }
 
   public getGameDataById(gameId: string): GameDataDto {
@@ -51,7 +61,7 @@ export class AppService {
 
   private getGameById(gameId: string): Game {
     const game = this.gameData.games.get(gameId);
-    if (!game) {
+    if (game == null) {
       throw new BadRequestException(`No game found with Id: ${gameId}`);
     }
     return game;

@@ -63,15 +63,12 @@ export class AppController {
    * @param gameID The Id of the game.
    * @param playerName The name of the player joining. Must be unique.
    */
-  @Post('join')
+  @Post('/:gameId/:teamName/:playerName')
   addPlayer(
     @Param('gameId') gameId: string,
-    @Param('playerName') playerName: string,
     @Param('teamName') teamName: string,
-    @Res() res
-  ) {
-    let gameData = this.appService.joinGame(gameId, playerName, teamName);
-    //TODO: remove redirect and return game data instead
-    res.redirect(`/api/${gameId}`);
+    @Param('playerName') playerName: string
+  ): string {
+    return this.appService.joinGame(gameId, playerName, teamName);
   }
 }
