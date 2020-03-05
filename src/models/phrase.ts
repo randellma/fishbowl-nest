@@ -1,4 +1,8 @@
 export class Phrase {
     phrase: string;
-    author: string;
+    authorName: string;
+
+    constructor(phrase: string = null) {
+        this.phrase = phrase;
+    }
 }

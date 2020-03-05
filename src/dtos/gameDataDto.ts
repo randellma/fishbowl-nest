@@ -11,7 +11,8 @@ export class GameDataDto {
   gameSettings: GameSettings;
   gameState: GameState;
   // Properties that should change based on who is getting the data.
+  player: Player;
   phrases: Phrase[];
-  currentPlayer: Player;
-  nextPlayer: Player;
+  currentPlayer: string;
+  nextPlayer: string;
 }

@@ -6,6 +6,8 @@ import { GameState } from './models/enum/GameState';
 import { GameSettings } from './models/GameSettings';
 import { Player } from './models/Player';
 import { GameData } from './data/game.data';
+import { Phrase } from './models/Phrase';
+import { Team } from './models/Team';
 
 @Injectable()
 export class AppService {
@@ -17,7 +19,10 @@ export class AppService {
    */
   public getGameData(gameId: string, playerId: string): GameDataDto {
     let game = this.getGameById(gameId);
-    return this.getBaseGameDataDto(game);
+    let gameData = this.getBaseGameDataDto(game);
+    let player = this.findPlayerInGame(game, playerId);
+    gameData.player = player;
+    return gameData;
   }
 
   public createNewGame(gameSettings: GameSettings): string {
@@ -26,6 +31,7 @@ export class AppService {
     }
     let game = new Game();
     game.id = this.getRandomString();
+    game.teams = [new Team('Team_1'), new Team('Team_2')];
     game.gameSettings = gameSettings;
     game.state = GameState.Registration;
     this.gameData.games.set(game.id, game);
@@ -37,11 +43,11 @@ export class AppService {
     if (game.state != GameState.Registration) {
       throw new BadRequestException('This game is not accepting new players');
     }
-    let team = game.gameSettings.teams.find(team => team.name == teamName);
+    let team = game.teams.find(team => team.name == teamName);
     if (team == null) {
       throw new BadRequestException(`No team found with name: ${teamName}`);
     }
-    let existingPlayer = game.gameSettings.teams
+    let existingPlayer = game.teams
       .some(team => team.players.some(player => player.name == playerName));
 
     if (existingPlayer) {
@@ -55,8 +61,61 @@ export class AppService {
     return player.id;
   }
 
+  public submitPhrases(gameId: string, playerId: string, phrases: Phrase[]): GameDataDto {
+    let game = this.getGameById(gameId);
+    let player = this.findPlayerInGame(game, playerId);
+    this.validatePhraseData(player, game.gameSettings, phrases);
+    player.phrasesSubmitted = true;
+    phrases.forEach(phrase => {
+      phrase.authorName = player.name;
+      game.phrases.push(phrase);
+    });
+
+    return this.getGameData(gameId, playerId);
+  }
+
+  private validatePhraseData(player: Player, gameSettings: GameSettings, phrases: Phrase[]) {
+    // Check player exists
+    if (player == null) {
+      throw new BadRequestException('Player does not exist');
+    }
+    // Check player hasn't already submitted phrases
+    if (player.phrasesSubmitted) {
+      throw new BadRequestException(`${player.name} has already submitted phrases.`);
+    }
+    // Check required number
+    if (phrases.length != gameSettings.phraseLimitPerPlayer) {
+      throw new BadRequestException(`Invalid number of phrases submitted. Expected: ${gameSettings.phraseLimitPerPlayer}`);
+    }
+    // Check all phrases unique
+    phrases.forEach(phrase => {
+      // Uniqueness
+      if (phrases.some(e => e.phrase == phrase.phrase && e !== phrase)) {
+        throw new BadRequestException('All phrases must be unique.');
+      }
+      if (phrase.phrase == null || phrase.phrase == "") {
+        throw new BadRequestException('All phrases must have a value.');
+      }
+      if (phrase.phrase.length > gameSettings.phraseCharacterLimit) {
+        throw new BadRequestException(`Phrases must be less than ${gameSettings.phraseCharacterLimit} characters.`);
+      }
+    });
+  }
+
   public getGameDataById(gameId: string): GameDataDto {
     return this.getBaseGameDataDto(this.getGameById(gameId));
+  }
+
+  public completeRegistration(gameId: string, playerId: string) {
+    let game = this.getGameById(gameId);
+    let player = this.findPlayerInGame(game, playerId);
+  }
+
+
+  // Private Methods
+
+  private findPlayerInGame(game: Game, playerId: string) {
+    return game.teams.map(team => team.players.find(player => player.id == playerId)).find(e => e != null);
   }
 
   private getGameById(gameId: string): Game {

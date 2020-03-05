@@ -3,12 +3,14 @@ import {
   Get,
   Param,
   Post,
-  Res
+  Res,
+  Body
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { GameDataDto } from './dtos/GameDataDto';
 import { Team } from './models/Team';
 import { GameSettings } from './models/GameSettings';
+import { Phrase } from './models/Phrase';
 
 @Controller('api')
 export class AppController {
@@ -18,7 +20,6 @@ export class AppController {
     let gameSettings = new GameSettings();
     gameSettings.phraseLimitPerPlayer = 3;
     gameSettings.phraseCharacterLimit = 150;
-    gameSettings.teams = [new Team('Team_1'), new Team('Team_2')];
     gameSettings.numberOfRounds = 3;
     gameSettings.passesAllowed = 3;
     gameSettings.timeLimit = 60;
@@ -53,6 +54,10 @@ export class AppController {
     return this.appService.createNewGame(gameSettings);
   }
 
+  /**
+   * Get game info needed to join for a known game id.
+   * @param gameId The known game id.
+   */
   @Get('/:gameId')
   getGameInfo(@Param('gameId') gameId: string): GameDataDto {
     return this.appService.getGameDataById(gameId);
@@ -63,12 +68,27 @@ export class AppController {
    * @param gameID The Id of the game.
    * @param playerName The name of the player joining. Must be unique.
    */
-  @Post('/:gameId/:teamName/:playerName')
-  addPlayer(
+  @Post(':gameId/:teamName/:playerName/join')
+  joinGame(
     @Param('gameId') gameId: string,
     @Param('teamName') teamName: string,
     @Param('playerName') playerName: string
   ): string {
     return this.appService.joinGame(gameId, playerName, teamName);
+  }
+
+  /**
+   * Submit phrases created by the player.
+   * @param gameID The Id of the game.
+   * @param playerName The name of the player joining. Must be unique.
+   * @param playerId The phrases to be submitted.
+   */
+  @Post(':gameId/:playerId/submitPhrases')
+  submitPhrases(
+    @Param('gameId') gameId: string,
+    @Param('playerId') playerId: string,
+    @Body() phrases: Phrase[]
+  ): GameDataDto {
+    return this.appService.submitPhrases(gameId, playerId, phrases);
   }
 }
