@@ -108,7 +108,20 @@ export class AppService {
 
   public completeRegistration(gameId: string, playerId: string) {
     let game = this.getGameById(gameId);
-    let player = this.findPlayerInGame(game, playerId);
+    this.validateRegistrationCompletion(game, playerId);
+  }
+
+  private validateRegistrationCompletion(game: Game, playerId: string) {
+    // Check game in registration state
+    if (game.state != GameState.Registration) {
+      throw new BadRequestException('Game setup is already complete.');
+    }
+    // Check that the leader is requesting the registration completion
+    if (game.leader.id != playerId) {
+      throw new BadRequestException(`The game leader must close registration: ${game.leader.name}`);
+    }
+    // Check all players have submitted phrases
+    game.teams.find(team => team.players.find(player => player.phrasesSubmitted != true) != null)
   }
 
 

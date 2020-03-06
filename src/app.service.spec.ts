@@ -381,13 +381,32 @@ describe('AppService', () => {
         expect(result2.player.id).toBe('p2');
     });
 
+    test('Game must be in registration status to complete registration', () => {
+        setupGenericGame(1);
+        gameData.games.get('g1').state = GameState.TurnReady;
+        let result = () => {
+            appService.completeRegistration('g1', 'p1');
+        };
+        expect(result).toThrow("Game setup is already complete.");
+    });
+
+    test('Game leader must complete registration', () => {
+        setupGenericGame(1);
+        let leader = new Player('pi3', 'pn3');
+        gameData.games.get('g1').leader = leader;
+        let result = () => {
+            appService.completeRegistration('g1', 'p1');
+        };
+        expect(result).toThrow("The game leader must close registration: pn3");
+    });
+
     // test('Game must have all players submit phrases to complete registration', () => {
     //     setupGenericGame(1);
 
     //     let result = () => {
     //         appService.completeRegistration('g1', 'p1');
     //     };
-    //     expect(result).toThrow
+    //     expect(result).toThrow("Some players have not submitted their phrases: p1, p2");
     // });
 
 });
