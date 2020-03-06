@@ -3,7 +3,7 @@ import { Game } from './models/Game';
 import { GameState } from './models/enum/GameState';
 import { GameSettings } from './models/GameSettings';
 import { Player } from './models/Player';
-import { GameData } from './data/game.data';
+import { GameData } from './data/GameData';
 import { Phrase } from './models/Phrase';
 import { Team } from './models/Team';
 import { GameDataDto } from './dtos/GameDataDto';

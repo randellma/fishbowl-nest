@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { GameData } from './data/game.data';
+import { GameData } from './data/GameData';
 
 @Module({
   imports: [],
