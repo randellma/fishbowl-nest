@@ -1,6 +1,6 @@
 import { TestingModule, Test } from "@nestjs/testing";
 import { AppService } from "./app.service";
-import { GameData } from "./data/Game.data";
+import { GameData } from "./data/GameData";
 import { Game } from "./models/Game";
 import { GameSettings } from "./models/GameSettings";
 import { GameState } from "./models/enum/GameState";
