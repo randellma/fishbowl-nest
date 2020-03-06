@@ -1,4 +1,3 @@
-import { Phrase } from "./Phrase";
 
 export class Player {
     id: string;

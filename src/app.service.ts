@@ -1,7 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { Game } from './models/Game';
 import { GameDataDto } from './dtos/GameDataDto';
-import { GameMode } from './models/enum/GameMode';
 import { GameState } from './models/enum/GameState';
 import { GameSettings } from './models/GameSettings';
 import { Player } from './models/Player';

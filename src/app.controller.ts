@@ -3,12 +3,10 @@ import {
   Get,
   Param,
   Post,
-  Res,
   Body
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { GameDataDto } from './dtos/GameDataDto';
-import { Team } from './models/Team';
 import { GameSettings } from './models/GameSettings';
 import { Phrase } from './models/Phrase';
 
