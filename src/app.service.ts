@@ -4,7 +4,7 @@ import { GameDataDto } from './dtos/GameDataDto';
 import { GameState } from './models/enum/GameState';
 import { GameSettings } from './models/GameSettings';
 import { Player } from './models/Player';
-import { GameData } from './data/game.data';
+import { GameData } from './data/Game.data';
 import { Phrase } from './models/Phrase';
 import { Team } from './models/Team';
 
