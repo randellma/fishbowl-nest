@@ -101,7 +101,7 @@ describe('AppService', () => {
         expect(game.lastUpdate).toBeDefined();
         expect(game.gameSettings).toBeDefined();
         expect(game.phrases.length).toBe(0);
-        expect(game.turnIndex).toBe(0);
+        expect(game.turnIndex).toBe(-1);
         game.teams.forEach(team => expect(team.playerTurnIndex).toBe(0));
     });
 
@@ -438,12 +438,155 @@ describe('AppService', () => {
         appService.completeRegistration('g1', 'p1');
 
         expect(game.state).toBe(GameState.TurnReady);
-        expect(game.turnIndex).toBe(0);
+        expect(game.turnIndex).toBe(-1);
         game.teams.forEach(team => expect(team.playerTurnIndex).toBe(0));
     });
 
     // Start Turn
 
 
+    test('Only nextPlayer may start the next turn', () => {
+        setupGenericGame(1);
+        let game = gameData.games.get('g1');
+        game.teams.forEach(t => t.players.forEach(p => p.phrasesSubmitted = true));
+
+        let result = () => {
+            appService.startTurn('g1', 'p2');
+        };
+
+        expect(result).toThrow("Only the next player may start the turn: p1");
+    });
+
+
+    // Game Data Static Methods
+    test('getPlayerAtTurnOffset - A -1 turnIndex with no offset returns a null current player. (The game has not begun)', () => {
+        setupGenericGame(1);
+        let game = gameData.games.get('g1');
+        game.turnIndex = -1;
+        expect(AppService.getPlayerAtTurnOffset(game)).toBeNull;
+    });
+
+    test('getPlayerAtTurnOffset- A 0 turnIndex with no offset returns the appropriate player from that team', () => {
+        setupGenericGame(1);
+        let game = gameData.games.get('g1');
+        game.turnIndex = 0; // making it team 1's turn
+        let team = game.teams[0];
+        team.playerTurnIndex = 0; // making it player 2's turn
+
+        let playerAtOffset = AppService.getPlayerAtTurnOffset(game);
+
+        expect(playerAtOffset).toBeDefined();
+        expect(playerAtOffset.name).toBe('p1');
+    });
+
+    test('getPlayerAtTurnOffset- A team index greater than teams.length returns correct team', () => {
+        setupGenericGame(1);
+        let game = gameData.games.get('g1');
+        game.turnIndex = 5; // making it team 2's turn
+
+        let playerAtOffset = AppService.getPlayerAtTurnOffset(game);
+
+        expect(playerAtOffset).toBeDefined();
+        expect(playerAtOffset.name).toBe('p2');
+    });
+
+    test('getPlayerAtTurnOffset- A player index higher than players.length returns correct player', () => {
+        setupGenericGame(1);
+        let game = gameData.games.get('g1');
+        game.turnIndex = 1; // making it team 2's turn
+        let team = game.teams[1];
+        team.playerTurnIndex = 6; // making it player 4's turn
+        team.players.push(new Player('p3', 'p3'));
+        team.players.push(new Player('p4', 'p4'));
+        team.players.push(new Player('p5', 'p5'));
+
+        let playerAtOffset = AppService.getPlayerAtTurnOffset(game);
+
+        expect(playerAtOffset).toBeDefined();
+        expect(playerAtOffset.name).toBe('p4');
+    });
+
+    test('getPlayerAtTurnOffset - Supplying a 1 offset with -1 teamIndex adjusts team/player index appropriately', () => {
+        setupGenericGame(1);
+        let game = gameData.games.get('g1');
+        game.turnIndex = -1; // making it team 1's turn "next"
+        let team = game.teams[0];
+        team.playerTurnIndex = 0; // making it player 1's turn "next"
+
+        let playerAtOffset = AppService.getPlayerAtTurnOffset(game, 1);
+
+        expect(playerAtOffset).toBeDefined();
+        expect(playerAtOffset.name).toBe('p1');
+    });
+
+    test('getPlayerAtTurnOffset - Supplying a > teamsize offset with -1 teamIndex adjusts team/player index appropriately', () => {
+        setupGenericGame(1);
+        let game = gameData.games.get('g1');
+        game.turnIndex = -1; // making it team 1's turn with 5 offset
+        let team = game.teams[0];
+        team.playerTurnIndex = 0; // making it player 1's turn "next"
+        team.players.push(new Player('p3', 'p3'));
+        team.players.push(new Player('p4', 'p4'));
+        team.players.push(new Player('p5', 'p5'));
+
+        let playerAtOffset = AppService.getPlayerAtTurnOffset(game, 5);
+
+        expect(playerAtOffset).toBeDefined();
+        expect(playerAtOffset.name).toBe('p4');
+    });
+
+    test('getPlayerAtTurnOffset - walking through initial offsets returns correct player sequence', () => {
+        setupGenericGame(1);
+        let game = gameData.games.get('g1');
+        game.turnIndex = 0; // making it team 1's current turn
+        let team1 = game.teams[0];
+        let team2 = game.teams[1];
+        team1.playerTurnIndex = 0;
+        team2.playerTurnIndex = 0;
+        team1.players.push(new Player('p3', 'p3'));
+        team2.players.push(new Player('p4', 'p4'));
+        team1.players.push(new Player('p5', 'p5'));
+        team2.players.push(new Player('p6', 'p6'));
+        team2.players.push(new Player('p7', 'p7'));
+
+        // expecting 1, 2, 3, 4, 5, 6, 1, 7, 3, 2
+        expect(AppService.getPlayerAtTurnOffset(game, 0).name).toBe('p1');
+        expect(AppService.getPlayerAtTurnOffset(game, 1).name).toBe('p2');
+        expect(AppService.getPlayerAtTurnOffset(game, 2).name).toBe('p3');
+        expect(AppService.getPlayerAtTurnOffset(game, 3).name).toBe('p4');
+        expect(AppService.getPlayerAtTurnOffset(game, 4).name).toBe('p5');
+        expect(AppService.getPlayerAtTurnOffset(game, 5).name).toBe('p6');
+        expect(AppService.getPlayerAtTurnOffset(game, 6).name).toBe('p1');
+        expect(AppService.getPlayerAtTurnOffset(game, 7).name).toBe('p7');
+        expect(AppService.getPlayerAtTurnOffset(game, 8).name).toBe('p3');
+        expect(AppService.getPlayerAtTurnOffset(game, 9).name).toBe('p2');
+    });
+
+    test('getPlayerAtTurnOffset - walking through progressed offsets returns correct player sequence', () => {
+        setupGenericGame(1);
+        let game = gameData.games.get('g1');
+        game.turnIndex = 6; // making it team 1's current turn
+        let team1 = game.teams[0];
+        let team2 = game.teams[1];
+        team1.playerTurnIndex = 10;
+        team2.playerTurnIndex = 10;
+        team1.players.push(new Player('p3', 'p3'));
+        team2.players.push(new Player('p4', 'p4'));
+        team1.players.push(new Player('p5', 'p5'));
+        team2.players.push(new Player('p6', 'p6'));
+        team2.players.push(new Player('p8', 'p8'));
+
+        // expecting 1, 2, 3, 4, 5, 6, 1, 7, 3, 2
+        expect(AppService.getPlayerAtTurnOffset(game, 0).name).toBe('p3');
+        expect(AppService.getPlayerAtTurnOffset(game, 1).name).toBe('p6');
+        expect(AppService.getPlayerAtTurnOffset(game, 2).name).toBe('p5');
+        expect(AppService.getPlayerAtTurnOffset(game, 3).name).toBe('p8');
+        expect(AppService.getPlayerAtTurnOffset(game, 4).name).toBe('p1');
+        expect(AppService.getPlayerAtTurnOffset(game, 5).name).toBe('p2');
+        expect(AppService.getPlayerAtTurnOffset(game, 6).name).toBe('p3');
+        expect(AppService.getPlayerAtTurnOffset(game, 7).name).toBe('p4');
+        expect(AppService.getPlayerAtTurnOffset(game, 8).name).toBe('p5');
+        expect(AppService.getPlayerAtTurnOffset(game, 9).name).toBe('p6');
+    });
 
 });

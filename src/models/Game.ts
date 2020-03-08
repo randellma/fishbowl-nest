@@ -19,6 +19,6 @@ export class Game {
     this.lastUpdate = new Date();
     this.phrases = [];
     this.gameSettings = new GameSettings();
-    this.turnIndex = 0;
+    this.turnIndex = -1;
   }
 }

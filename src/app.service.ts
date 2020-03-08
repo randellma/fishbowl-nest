@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { Game } from './models/Game';
 import { GameState } from './models/enum/GameState';
 import { GameSettings } from './models/GameSettings';
@@ -7,6 +7,7 @@ import { GameData } from './data/GameData';
 import { Phrase } from './models/Phrase';
 import { Team } from './models/Team';
 import { GameDataDto } from './dtos/GameDataDto';
+import { GameMode } from './models/enum/GameMode';
 
 @Injectable()
 export class AppService {
@@ -137,12 +138,24 @@ export class AppService {
   }
 
   public startTurn(gameId: string, playerId: string) {
-
+    let game = this.getGameById(gameId);
+    let nextPlayer = AppService.getPlayerAtTurnOffset(game, 1);
+    if (nextPlayer.id != playerId) {
+      throw new BadRequestException(`Only the next player may start the turn: ${nextPlayer.name}`);
+    }
   }
 
-  // Static
-  public static getCurrentPlayer() {
+  // Statics
 
+  public static getPlayerAtTurnOffset(game: Game, offset: number = 0): Player {
+    let teams = game.teams;
+    let adjustedTurnIndex = (game.turnIndex + offset % teams.length) % teams.length;
+    if (adjustedTurnIndex < 0) {
+      return null;
+    }
+    let currentTeam = teams[adjustedTurnIndex];
+    let adjustedPlayerIndex = ((currentTeam.playerTurnIndex + Math.floor(offset / teams.length)) % currentTeam.players.length);
+    return currentTeam.players[adjustedPlayerIndex];
   }
 
 
