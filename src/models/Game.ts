@@ -13,9 +13,12 @@ export class Game {
   lastUpdate: Date;
   leader: Player;
 
+  turnIndex: number;
+
   constructor() {
     this.lastUpdate = new Date();
     this.phrases = [];
     this.gameSettings = new GameSettings();
+    this.turnIndex = 0;
   }
 }

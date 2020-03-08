@@ -24,17 +24,24 @@ export class AppService {
     return gameData;
   }
 
-  public createNewGame(gameSettings: GameSettings): string {
-    if (!gameSettings) {
-      throw new BadRequestException('Invalid game settings');
-    }
+  public createNewGame(gameSettings: GameSettings, teamNames: string[]): string {
+    this.validateGameCreation(gameSettings, teamNames);
     let game = new Game();
     game.id = this.getRandomString();
-    game.teams = [new Team('Team_1'), new Team('Team_2')];
+    game.teams = teamNames.map(name => new Team(name));
     game.gameSettings = gameSettings;
     game.state = GameState.Registration;
     this.gameData.games.set(game.id, game);
     return game.id;
+  }
+
+  private validateGameCreation(gameSettings: GameSettings, teamNames: string[]) {
+    if (!gameSettings) {
+      throw new BadRequestException('Invalid game settings.');
+    }
+    if (teamNames.length == 0) {
+      throw new BadRequestException('At least one team must be specified.');
+    }
   }
 
   public joinGame(gameId: string, playerName: string, teamName: string): string {
@@ -108,6 +115,7 @@ export class AppService {
   public completeRegistration(gameId: string, playerId: string) {
     let game = this.getGameById(gameId);
     this.validateRegistrationCompletion(game, playerId);
+    game.state = GameState.TurnReady;
   }
 
   private validateRegistrationCompletion(game: Game, playerId: string) {
@@ -120,7 +128,21 @@ export class AppService {
       throw new BadRequestException(`The game leader must close registration: ${game.leader.name}`);
     }
     // Check all players have submitted phrases
-    game.teams.find(team => team.players.find(player => player.phrasesSubmitted != true) != null)
+    let badPlayers: string[] = [];
+    game.teams.map(team => team.players.filter(player => player.phrasesSubmitted != true))
+      .map(pa => pa.forEach(p => badPlayers.push(p.name)));
+    if (badPlayers.length > 0) {
+      throw new BadRequestException(`Some players have not submitted their phrases: ${badPlayers.join(', ')}`);
+    }
+  }
+
+  public startTurn(gameId: string, playerId: string) {
+
+  }
+
+  // Static
+  public static getCurrentPlayer() {
+
   }
 
 

@@ -13,6 +13,19 @@ describe('AppService', () => {
     let appService: AppService;
     let gameData: GameData;
 
+    beforeAll(async () => {
+        const app: TestingModule = await Test.createTestingModule({
+            providers: [AppService, GameData],
+        }).compile();
+        appService = app.get<AppService>(AppService);
+        gameData = app.get<GameData>(GameData);
+    });
+
+    beforeEach(async () => {
+        gameData.games = new Map();
+    });
+
+    // Helpers
     function getGenericGame(gameId: string): Game {
         let game = new Game();
         game.id = gameId;
@@ -39,26 +52,16 @@ describe('AppService', () => {
         return game;
     }
 
-    //Add games with ids 'g1', 'g2', ...'gn'
+    // Add games with ids 'g1', 'g2', ...'gn'
     function setupGenericGame(numberOfGames: number) {
         for (let index = 1; index <= numberOfGames; index++) {
             gameData.addGame(getGenericGame(`g${index}`));
         }
     }
 
-    beforeAll(async () => {
-        const app: TestingModule = await Test.createTestingModule({
-            providers: [AppService, GameData],
-        }).compile();
-        appService = app.get<AppService>(AppService);
-        gameData = app.get<GameData>(GameData);
-    });
+    //Game Data Loop
 
-    beforeEach(async () => {
-        gameData.games = new Map();
-    });
-
-    test('getGameDataById throws exception if not found', () => {
+    test('getGameDataById throws exception if game not found', () => {
         let result = () => {
             appService.getGameDataById('game');
         };
@@ -74,8 +77,23 @@ describe('AppService', () => {
         expect(result.gameId).toBe('game');
     });
 
+    test('getGameData fetches correct player', () => {
+        setupGenericGame(1);
+
+        let result1 = appService.getGameData('g1', 'p1');
+        let result2 = appService.getGameData('g1', 'p2');
+
+        expect(result1.player).toBeDefined();
+        expect(result1.player.id).toBe('p1');
+
+        expect(result2.player).toBeDefined();
+        expect(result2.player.id).toBe('p2');
+    });
+
+    // Create New Games
+
     test('createNewGame sets correct values', () => {
-        let result = appService.createNewGame(new GameSettings());
+        let result = appService.createNewGame(new GameSettings(), ['Team_1', 'Team_2']);
         expect(result).toBeDefined();
         expect(result.length).toBe(5);
         var game = gameData.games.get(result);
@@ -83,15 +101,27 @@ describe('AppService', () => {
         expect(game.lastUpdate).toBeDefined();
         expect(game.gameSettings).toBeDefined();
         expect(game.phrases.length).toBe(0);
+        expect(game.turnIndex).toBe(0);
+        game.teams.forEach(team => expect(team.playerTurnIndex).toBe(0));
     });
 
     test('createNewGame with null gamesettings throws an exception', () => {
         let result = () => {
-            appService.createNewGame(null);
+            appService.createNewGame(null, []);
         };
 
-        expect(result).toThrow('Invalid game settings');
+        expect(result).toThrow('Invalid game settings.');
     });
+
+    test('createNewGame with no team names thows an exception', () => {
+        let result = () => {
+            appService.createNewGame(new GameSettings(), []);
+        };
+
+        expect(result).toThrow('At least one team must be specified.');
+    });
+
+    // Joining games
 
     test('joinGame with invalid game id throws an exception', () => {
         let game = new Game();
@@ -202,7 +232,9 @@ describe('AppService', () => {
         expect(game.leader.name).toBe('otherPlayer');
     });
 
-    test('Non-player trying to subkit phrases throws an exception', () => {
+    // Submitting Phrases
+
+    test('Non-player trying to submit phrases throws an exception', () => {
         let game = new Game();
         game.id = 'gameId';
         gameData.addGame(game);
@@ -368,18 +400,7 @@ describe('AppService', () => {
         });
     });
 
-    test('getGameData fetches correct player', () => {
-        setupGenericGame(1);
-
-        let result1 = appService.getGameData('g1', 'p1');
-        let result2 = appService.getGameData('g1', 'p2');
-
-        expect(result1.player).toBeDefined();
-        expect(result1.player.id).toBe('p1');
-
-        expect(result2.player).toBeDefined();
-        expect(result2.player.id).toBe('p2');
-    });
+    // Completing Registration
 
     test('Game must be in registration status to complete registration', () => {
         setupGenericGame(1);
@@ -400,13 +421,29 @@ describe('AppService', () => {
         expect(result).toThrow("The game leader must close registration: pn3");
     });
 
-    // test('Game must have all players submit phrases to complete registration', () => {
-    //     setupGenericGame(1);
+    test('All players submit phrases to complete game registration', () => {
+        setupGenericGame(1);
 
-    //     let result = () => {
-    //         appService.completeRegistration('g1', 'p1');
-    //     };
-    //     expect(result).toThrow("Some players have not submitted their phrases: p1, p2");
-    // });
+        let result = () => {
+            appService.completeRegistration('g1', 'p1');
+        };
+        expect(result).toThrow("Some players have not submitted their phrases: p1, p2");
+    });
+
+    test('Completing registration moves game to TURN_READY state', () => {
+        setupGenericGame(1);
+        let game = gameData.games.get('g1');
+        game.teams.forEach(t => t.players.forEach(p => p.phrasesSubmitted = true));
+
+        appService.completeRegistration('g1', 'p1');
+
+        expect(game.state).toBe(GameState.TurnReady);
+        expect(game.turnIndex).toBe(0);
+        game.teams.forEach(team => expect(team.playerTurnIndex).toBe(0));
+    });
+
+    // Start Turn
+
+
 
 });

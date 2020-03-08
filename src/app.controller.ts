@@ -9,6 +9,7 @@ import { AppService } from './app.service';
 import { GameDataDto } from './dtos/GameDataDto';
 import { GameSettings } from './models/GameSettings';
 import { Phrase } from './models/Phrase';
+import { CreateGameDto } from './dtos/CreateGameDto';
 
 @Controller('api')
 export class AppController {
@@ -26,7 +27,7 @@ export class AppController {
 
   @Get()
   get(): string {
-    let gameId = this.appService.createNewGame(this.getDefaultGameSettings());
+    let gameId = this.appService.createNewGame(this.getDefaultGameSettings(), ['Team_1', 'Team_2']);
     //TODO: just return the id of the game and let front end redirect if it wants to
     return gameId;
   }
@@ -48,8 +49,8 @@ export class AppController {
    * Create a game with given settings and redirect to its Id to join.
    */
   @Post('create')
-  createGame(@Param('game') gameSettings: GameSettings): string {
-    return this.appService.createNewGame(gameSettings);
+  createGame(@Body() createGameDto: CreateGameDto): string {
+    return this.appService.createNewGame(createGameDto.gameSettings, createGameDto.teamNames);
   }
 
   /**
